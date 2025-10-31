@@ -23,10 +23,5 @@
       "src": "/",
       "dest": "/public/index.html"
     }
-  ],
-  "env": {
-    "SUPABASE_URL": "@supabase-url",
-    "SUPABASE_ANON_KEY": "@supabase-anon-key",
-    "SUPABASE_TABLE_NAME": "@supabase-table-name"
-  }
+  ]
 }
