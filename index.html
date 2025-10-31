@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Printer - Live Feed</title>
+    
+    <!-- Google Fonts for better typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #faf8f5;
+            background-image: 
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 0, 0, 0.015),
+                    rgba(0, 0, 0, 0.015) 1px,
+                    transparent 1px,
+                    transparent 2px
+                );
+            color: #2d3748;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .printer-container {
+            height: 100vh;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(to bottom, 
+                rgba(255, 255, 255, 0.95) 0%, 
+                rgba(255, 255, 255, 0.85) 100%);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .printer-header {
+            background: #ffffff;
+            padding: 24px 32px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            position: relative;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .printer-header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a202c;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #fc8181;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #48bb78;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
+        }
+
+        .news-feed {
+            height: calc(100vh - 81px);
+            position: relative;
+            overflow: hidden;
+            padding: 32px;
+        }
+
+        .news-item {
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: 12px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+            position: absolute;
+            width: calc(100% - 64px);
+            left: 32px;
+            animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 
+                0 1px 3px rgba(0, 0, 0, 0.05),
+                0 2px 6px rgba(0, 0, 0, 0.02);
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            line-height: 1.8;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .news-item.printing {
+            background: linear-gradient(135deg, #667eea08 0%, #764ba208 100%);
+            border-color: #667eea;
+            box-shadow: 
+                0 4px 12px rgba(102, 126, 234, 0.15),
+                0 2px 6px rgba(102, 126, 234, 0.1);
+        }
+
+        .news-datetime {
+            font-size: 11px;
+            font-weight: 500;
+            color: #a0aec0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .news-headline {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 12px;
+            line-height: 1.4;
+            letter-spacing: -0.01em;
+        }
+
+        .news-content {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #4a5568;
+            font-weight: 400;
+            letter-spacing: 0.01em;
+        }
+
+        .typing-cursor {
+            position: absolute;
+            bottom: 40px;
+            left: 32px;
+            width: calc(100% - 64px);
+            height: 40px;
+            display: flex;
+            align-items: center;
+            z-index: 50;
+        }
+
+        .cursor {
+            width: 2px;
+            height: 24px;
+            background: #667eea;
+            animation: blink 1s infinite;
+            margin-left: 4px;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        .cursor-text {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 13px;
+            color: #a0aec0;
+            margin-right: 4px;
+        }
+
+        .loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            color: #718096;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            border: 1px solid #fc8181;
+            border-left: 4px solid #fc8181;
+            color: #c53030;
+            padding: 16px 20px;
+            border-radius: 8px;
+            max-width: 400px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .stats {
+            position: absolute;
+            bottom: 10px;
+            right: 32px;
+            font-size: 11px;
+            color: #a0aec0;
+            font-family: 'IBM Plex Mono', monospace;
+            z-index: 100;
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Fade effect for older items */
+        .news-item.fading {
+            opacity: 0.4;
+            transform: scale(0.98);
+        }
+
+        /* Paper texture overlay */
+        .paper-texture {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0.03;
+            background-image: 
+                repeating-linear-gradient(
+                    45deg,
+                    transparent,
+                    transparent 35px,
+                    rgba(0, 0, 0, 0.01) 35px,
+                    rgba(0, 0, 0, 0.01) 70px
+                );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .news-feed {
+                padding: 20px;
+            }
+            
+            .news-item {
+                width: calc(100% - 40px);
+                left: 20px;
+                padding: 20px;
+            }
+            
+            .printer-header {
+                padding: 20px;
+            }
+            
+            .typing-cursor {
+                left: 20px;
+                width: calc(100% - 40px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="printer-container">
+        <div class="paper-texture"></div>
+        
+        <div class="printer-header">
+            <h1>
+                <div class="logo">📰</div>
+                News Feed
+            </h1>
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </div>
+        
+        <div class="news-feed" id="newsFeed">
+            <div class="loading-indicator" id="loadingIndicator">
+                <div class="loading-spinner"></div>
+                <span>Initializing feed...</span>
+            </div>
+        </div>
+        
+        <div class="typing-cursor">
+            <span class="cursor-text">Waiting for news</span>
+            <div class="cursor"></div>
+        </div>
+
+        <div class="stats" id="stats">
+            <span id="itemCount">0 items</span>
+            <span>•</span>
+            <span id="lastUpdate">--:--:--</span>
+        </div>
+    </div>
+
+    <div class="error-message" id="errorMessage">
+        <strong>Connection Error</strong>
+        <p id="errorText"></p>
+    </div>
+
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        let supabase = null;
+        let subscription = null;
+        let newsItems = [];
+        let config = null;
+        let itemCount = 0;
+        const ITEM_HEIGHT = 140; // Increased for better spacing
+        const ANIMATION_DURATION = 500;
+
+        // Initialize application
+        async function initialize() {
+            try {
+                // Fetch configuration from server
+                const response = await fetch('/api/config');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch configuration');
+                }
+                
+                config = await response.json();
+                
+                // Initialize Supabase client
+                supabase = window.supabase.createClient(
+                    config.supabaseUrl,
+                    config.supabaseAnonKey
+                );
+                
+                // Clear loading indicator
+                document.getElementById('loadingIndicator').style.display = 'none';
+                
+                // Update status
+                updateStatus(true);
+                
+                // Load existing news items
+                await loadExistingNews();
+                
+                // Set up real-time subscription
+                setupRealtimeSubscription();
+                
+                // Update cursor text
+                updateCursorText('Ready for news');
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError('Failed to initialize: ' + error.message);
+                updateStatus(false);
+            }
+        }
+
+        function updateStatus(connected) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            if (connected) {
+                dot.classList.add('connected');
+                text.textContent = 'Live';
+            } else {
+                dot.classList.remove('connected');
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('itemCount').textContent = `${itemCount} items`;
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
+            document.getElementById('lastUpdate').textContent = timeString;
+        }
+
+        function updateCursorText(text) {
+            const cursorText = document.querySelector('.cursor-text');
+            if (cursorText) {
+                cursorText.textContent = text;
+            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            errorText.textContent = message;
+            errorEl.classList.add('show');
+            
+            setTimeout(() => {
+                errorEl.classList.remove('show');
+            }, 5000);
+        }
+
+        async function loadExistingNews() {
+            try {
+                const { data, error } = await supabase
+                    .from(config.tableName)
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(10); // Reduced for cleaner initial load
+                
+                if (error) throw error;
+                
+                // Add existing items (in reverse order so newest appears at bottom)
+                if (data && data.length > 0) {
+                    const reversedData = [...data].reverse();
+                    reversedData.forEach((item, index) => {
+                        setTimeout(() => {
+                            addNewsItem(item, false);
+                        }, index * 150);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading news:', error);
+                showError('Failed to load existing news');
+            }
+        }
+
+        function setupRealtimeSubscription() {
+            // Clean up existing subscription if any
+            if (subscription) {
+                supabase.removeChannel(subscription);
+            }
+
+            // Create new subscription
+            subscription = supabase
+                .channel('news-changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: config.tableName
+                    },
+                    (payload) => {
+                        console.log('New news received:', payload);
+                        updateCursorText('Printing...');
+                        addNewsItem(payload.new, true);
+                        setTimeout(() => {
+                            updateCursorText('Ready for news');
+                        }, 1000);
+                    }
+                )
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ Subscribed to real-time updates');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        console.error('❌ Subscription error');
+                        updateStatus(false);
+                        showError('Real-time connection lost');
+                    }
+                });
+        }
+
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            const options = {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            return date.toLocaleString('en-US', options).toUpperCase();
+        }
+
+        function addNewsItem(item, isNew = true) {
+            const newsFeed = document.getElementById('newsFeed');
+            
+            // Create news item element
+            const newsElement = document.createElement('div');
+            newsElement.className = 'news-item';
+            if (isNew) {
+                newsElement.classList.add('printing');
+            }
+            
+            // Use DateTime field if available, otherwise use created_at
+            const dateTime = item.DateTime || item.created_at;
+            const headline = item.Headline || 'News Update';
+            const content = item.Content || item.content || 'No content available';
+            
+            newsElement.innerHTML = `
+                <div class="news-datetime">${formatDateTime(dateTime)}</div>
+                <div class="news-headline">${headline}</div>
+                <div class="news-content">${content}</div>
+            `;
+            
+            // Add to tracking
+            newsItems.push(newsElement);
+            itemCount++;
+            updateStats();
+            
+            // Calculate position for new item (at bottom, above cursor)
+            const bottomPosition = 80; // Space for cursor
+            newsElement.style.bottom = bottomPosition + 'px';
+            
+            // Move all existing items up
+            moveExistingItemsUp();
+            
+            // Add to DOM
+            newsFeed.appendChild(newsElement);
+            
+            // Remove printing effect after animation
+            if (isNew) {
+                setTimeout(() => {
+                    newsElement.classList.remove('printing');
+                }, 1500);
+            }
+            
+            // Fade older items and remove if too many
+            if (newsItems.length > 20) {
+                const oldItem = newsItems.shift();
+                oldItem.style.opacity = '0';
+                oldItem.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    oldItem.remove();
+                }, 500);
+                itemCount--;
+            }
+            
+            // Add fading class to very old items
+            newsItems.forEach((item, index) => {
+                if (index < newsItems.length - 8) {
+                    item.classList.add('fading');
+                } else {
+                    item.classList.remove('fading');
+                }
+            });
+        }
+
+        function moveExistingItemsUp() {
+            newsItems.forEach((item, index) => {
+                if (index < newsItems.length - 1) {
+                    const currentBottom = parseInt(item.style.bottom) || 80;
+                    const newBottom = currentBottom + ITEM_HEIGHT + 20; // 20px margin
+                    item.style.bottom = newBottom + 'px';
+                }
+            });
+        }
+
+        // Check server health periodically
+        async function checkHealth() {
+            try {
+                const response = await fetch('/api/health');
+                const health = await response.json();
+                
+                if (health.status === 'healthy') {
+                    updateStatus(true);
+                } else {
+                    updateStatus(false);
+                    showError('Database connection issue');
+                }
+            } catch (error) {
+                updateStatus(false);
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            initialize();
+            
+            // Health check every 30 seconds
+            setInterval(checkHealth, 30000);
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (subscription) {
+                supabase.removeChannel(subscription);
+            }
+        });
+
+        // Handle visibility change to reconnect if needed
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && config) {
+                setupRealtimeSubscription();
+            }
+        });
+    </script>
+</body>
+</html>
